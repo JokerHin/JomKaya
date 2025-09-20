@@ -40,7 +40,13 @@ export async function POST(request: NextRequest) {
       message: "User created successfully",
     });
   } catch (_error) {
-    console.error("Registration error:", _error);
+    try {
+      const errAny = _error as any;
+      console.error("Registration error:", errAny, errAny?.stack);
+    } catch (logErr) {
+      console.error("Registration error (failed to print stack):", _error);
+    }
+
     return NextResponse.json(
       { success: false, message: "Internal server error" },
       { status: 500 }
