@@ -8,14 +8,22 @@ export function cn(...inputs: ClassValue[]) {
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 
-// Create DynamoDB client
-const client = new DynamoDBClient({
+const clientConfig: any = {
   region: process.env.REGION || "us-east-1",
-  credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.SECRET_ACCESS_KEY || "",
-  },
-});
+};
+
+if (process.env.ACCESS_KEY_ID && process.env.SECRET_ACCESS_KEY) {
+  clientConfig.credentials = {
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+  };
+} else {
+  console.warn(
+    "AWS credentials not fully provided via env vars. Relying on default credential provider chain."
+  );
+}
+
+const client = new DynamoDBClient(clientConfig);
 
 export const dynamoClient = DynamoDBDocumentClient.from(client);
 
