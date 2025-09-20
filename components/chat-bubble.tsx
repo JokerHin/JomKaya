@@ -1,13 +1,17 @@
 import * as React from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Bot, User } from "lucide-react";
+import { MessageTranslation } from "@/components/translation-controls";
 
 interface ChatBubbleProps {
   message: string;
   isUser: boolean;
   timestamp?: string;
   isLoading?: boolean;
+  enableTranslation?: boolean;
+  onTranslate?: (text: string, targetLanguage: "en" | "ms") => Promise<string>;
 }
 
 export function ChatBubble({
@@ -15,7 +19,50 @@ export function ChatBubble({
   isUser,
   timestamp,
   isLoading,
+  enableTranslation = false,
+  onTranslate,
 }: ChatBubbleProps) {
+  const [translatedText, setTranslatedText] = useState<string>("");
+  const [isTranslated, setIsTranslated] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [targetLanguage, setTargetLanguage] = useState<"en" | "ms">("ms");
+
+  const handleToggleTranslation = async () => {
+    if (isTranslated) {
+      setIsTranslated(false);
+      return;
+    }
+
+    if (!onTranslate) return;
+
+    setIsTranslating(true);
+    try {
+      const translated = await onTranslate(message, targetLanguage);
+      setTranslatedText(translated);
+      setIsTranslated(true);
+    } catch (error) {
+      console.error("Translation failed:", error);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  // Auto-detect and set target language based on message content
+  React.useEffect(() => {
+    if (message) {
+      const hasEnglishWords =
+        /\b(the|and|or|but|in|on|at|to|for|of|with|by|investment|stock|shariah)\b/i.test(
+          message
+        );
+      const englishPattern = /^[a-zA-Z0-9\s.,!?'"()-]+$/;
+
+      if (englishPattern.test(message) && hasEnglishWords) {
+        setTargetLanguage("ms"); // If message is in English, translate to Malay
+      } else {
+        setTargetLanguage("en"); // If message is in Malay, translate to English
+      }
+    }
+  }, [message]);
   return (
     <div
       className={cn(
@@ -63,7 +110,7 @@ export function ChatBubble({
             </div>
           ) : (
             <div className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-wrap-anywhere">
-              {message}
+              {isTranslated ? translatedText : message}
             </div>
           )}
 
@@ -76,6 +123,18 @@ export function ChatBubble({
             >
               {timestamp}
             </div>
+          )}
+
+          {/* Translation controls - only show for non-user messages and when translation is enabled */}
+          {enableTranslation && !isUser && !isLoading && (
+            <MessageTranslation
+              originalText={message}
+              translatedText={translatedText}
+              isTranslated={isTranslated}
+              onToggleTranslation={handleToggleTranslation}
+              targetLanguage={targetLanguage}
+              isTranslating={isTranslating}
+            />
           )}
         </Card>
       </div>

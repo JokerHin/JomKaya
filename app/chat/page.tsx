@@ -11,6 +11,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatBubble } from "@/components/chat-bubble";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/components/auth-provider";
+import { TranslationControls } from "@/components/translation-controls";
+import { useTranslation } from "@/hooks/useTranslation";
+import { useStreamingChat } from "@/hooks/useStreamingChat";
 
 interface Message {
   id: string;
@@ -25,44 +28,89 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [bedrockStatus, setBedrockStatus] = useState<
+    "unknown" | "connected" | "offline"
+  >("unknown");
+  const { translateText, isTranslating, currentLanguage, setCurrentLanguage } =
+    useTranslation();
+  const { sendStreamingMessage } = useStreamingChat();
 
   useEffect(() => {
     if (!user) {
       router.push("/login");
       return;
     }
-
     if (!user.hasCompletedAssessment) {
       router.push("/assessment");
       return;
     }
-
-    // Initialize with personalized welcome message
-    const personalizedWelcome = getPersonalizedWelcome(user);
-    setMessages([personalizedWelcome]);
+    fetchUserProfile();
+    checkBedrockStatus();
   }, [user, router]);
 
-  const getPersonalizedWelcome = (user: any): Message => {
-    const assessment = user.assessmentData;
-    let welcomeMessage = `Hello ${user.name}! 👋\n\nBased on your investment profile, I'm here to help you with personalized Shariah-compliant investment advice.\n\n`;
-    
-    if (assessment) {
-      welcomeMessage += `📊 **Your Profile:**\n`;
-      welcomeMessage += `• Risk Tolerance: ${assessment.riskTolerance}\n`;
-      welcomeMessage += `• Investment Experience: ${assessment.investmentExperience}\n`;
-      welcomeMessage += `• Investment Horizon: ${assessment.investmentHorizon}-term\n`;
-      welcomeMessage += `• Monthly Investment: RM${assessment.monthlyInvestmentAmount}\n\n`;
-      
-      if (assessment.shariahCompliantOnly) {
-        welcomeMessage += `✅ I'll only recommend Shariah-compliant investments as per your preference.\n\n`;
+  const checkBedrockStatus = async () => {
+    try {
+      const response = await fetch("/api/chat?action=health");
+      const data = await response.json();
+      setBedrockStatus(data.success ? "connected" : "offline");
+    } catch (error) {
+      setBedrockStatus("offline");
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    try {
+      const response = await fetch(`/api/assessment?userId=${user.id}`);
+      const data = await response.json();
+      if (data.success && data.profile) {
+        setUserProfile(data.profile);
+        const personalizedWelcome = getPersonalizedWelcome(user, data.profile);
+        setMessages([personalizedWelcome]);
+      } else {
+        const welcomeMessage = getPersonalizedWelcome(user, null);
+        setMessages([welcomeMessage]);
       }
-      
+    } catch (error) {
+      console.error("Failed to fetch user profile:", error);
+      const basicWelcome = getPersonalizedWelcome(user, null);
+      setMessages([basicWelcome]);
+    }
+  };
+
+  const getPersonalizedWelcome = (user: any, profile: any): Message => {
+    let welcomeMessage = `Hello ${user.name}! 👋\n\nWelcome to JomKaya AI Assistant. I'm here to help you with Shariah-compliant investment guidance.\n\n`;
+
+    if (profile) {
+      welcomeMessage += `📊 **Your Investment Profile:**\n`;
+      if (profile.riskTolerance) {
+        welcomeMessage += `• Risk Tolerance: ${profile.riskTolerance}\n`;
+      }
+      if (profile.investmentExperience) {
+        welcomeMessage += `• Investment Experience: ${profile.investmentExperience}\n`;
+      }
+      if (profile.timeHorizon) {
+        welcomeMessage += `• Time Horizon: ${profile.timeHorizon}\n`;
+      }
+      if (profile.liquidityNeeds) {
+        welcomeMessage += `• Liquidity Needs: ${profile.liquidityNeeds}\n`;
+      }
+      welcomeMessage += `\n✅ I'll provide personalized recommendations based on your profile.\n\n`;
       welcomeMessage += `💡 **I can help you with:**\n`;
       welcomeMessage += `• Personalized stock recommendations\n`;
       welcomeMessage += `• Portfolio allocation suggestions\n`;
-      welcomeMessage += `• Sector-specific advice\n`;
-      welcomeMessage += `• Investment strategy based on your goals\n\n`;
+      welcomeMessage += `• Shariah compliance explanations\n`;
+      welcomeMessage += `• Investment strategy guidance\n\n`;
       welcomeMessage += `What would you like to know about investing today?`;
+    } else {
+      welcomeMessage += `I can help you with general Shariah-compliant investment questions including:\n\n`;
+      welcomeMessage += `🔍 **Topics I cover:**\n`;
+      welcomeMessage += `• Shariah compliance principles\n`;
+      welcomeMessage += `• Stock screening criteria\n`;
+      welcomeMessage += `• Prohibited sectors\n`;
+      welcomeMessage += `• Investment strategies\n\n`;
+      welcomeMessage += `For personalized recommendations, please complete your investor assessment first.\n\nWhat would you like to know?`;
     }
 
     return {
@@ -76,67 +124,111 @@ export default function ChatPage() {
     };
   };
 
-  const getPersonalizedResponse = (userQuestion: string, user: any): string => {
-    const assessment = user.assessmentData;
+  const getPersonalizedResponse = (userQuestion: string): string => {
     const question = userQuestion.toLowerCase();
-    
-    if (question.includes("recommend") || question.includes("suggest")) {
-      let response = `Based on your ${assessment.riskTolerance} risk profile and ${assessment.investmentExperience} experience level, here are my recommendations:\n\n`;
-      
-      if (assessment.riskTolerance === "conservative") {
-        response += `🛡️ **Conservative Portfolio (Suitable for you):**\n`;
-        response += `• **REITs (40%):** Al-Aqar Healthcare REIT, Axis REIT\n`;
-        response += `• **Blue-chip stocks (35%):** Maybank, Public Bank, Tenaga Nasional\n`;
-        response += `• **Fixed income (25%):** Islamic bonds, sukuk\n\n`;
-      } else if (assessment.riskTolerance === "moderate") {
-        response += `⚖️ **Balanced Portfolio (Suitable for you):**\n`;
-        response += `• **Growth stocks (45%):** MYEG, Genting Malaysia, IHH Healthcare\n`;
-        response += `• **REITs (25%):** Sunway REIT, KLCC REIT\n`;
-        response += `• **Blue-chip stocks (30%):** CIMB, Axiata, MMC Corp\n\n`;
-      } else {
-        response += `🚀 **Growth Portfolio (Suitable for you):**\n`;
-        response += `• **Tech & Growth (60%):** MYEG, Pentamaster, VSTECS\n`;
-        response += `• **Emerging sectors (25%):** Glove stocks, renewable energy\n`;
-        response += `• **Blue-chip anchor (15%):** Maybank, Public Bank\n\n`;
-      }
-      
-      response += `💰 **Monthly Investment Strategy (RM${assessment.monthlyInvestmentAmount}):**\n`;
-      response += `Consider dollar-cost averaging across these sectors based on your ${assessment.investmentHorizon}-term horizon.\n\n`;
-      
-      if (assessment.preferredSectors?.length > 0) {
-        response += `🎯 **Your Preferred Sectors:** ${assessment.preferredSectors.join(", ")}\n`;
-        response += `I've included recommendations from these sectors where possible.\n\n`;
-      }
-      
-      response += `⚠️ **Important:** This is general guidance. Please consult with a licensed financial advisor before making investment decisions.`;
-      
-      return response;
+
+    if (
+      userProfile &&
+      (question.includes("recommend") || question.includes("suggest"))
+    ) {
+      return getProfileBasedRecommendation(userProfile, question);
     }
-    
-    // Return existing response logic for other questions
+    if (
+      userProfile &&
+      (question.includes("portfolio") || question.includes("allocation"))
+    ) {
+      return getPortfolioAllocation(userProfile);
+    }
     return getStandardResponse(question);
   };
 
-  const getStandardResponse = (userQuestion: string): string => {
+  const getProfileBasedRecommendation = (
+    profile: any,
+    question: string
+  ): string => {
+    let response = `Based on your ${
+      profile.riskTolerance || "moderate"
+    } risk profile, here are my recommendations:\n\n`;
+    const riskLevel = profile.riskTolerance || "Moderate";
+
+    if (riskLevel === "Conservative") {
+      response += `🛡️ **Conservative Portfolio (Suitable for you):**\n`;
+      response += `• **REITs (40%):** Al-Aqar Healthcare REIT, Axis REIT\n`;
+      response += `• **Blue-chip stocks (35%):** Maybank, Public Bank, Tenaga Nasional\n`;
+      response += `• **Islamic bonds (25%):** Government and corporate sukuk\n\n`;
+      response += `This allocation prioritizes capital preservation with steady income.`;
+    } else if (riskLevel === "Moderate") {
+      response += `⚖️ **Balanced Portfolio (Suitable for you):**\n`;
+      response += `• **Growth stocks (45%):** MYEG, Genting Malaysia, IHH Healthcare\n`;
+      response += `• **REITs (25%):** Sunway REIT, KLCC REIT\n`;
+      response += `• **Blue-chip stocks (30%):** CIMB, Axiata, MMC Corp\n\n`;
+      response += `This balanced approach offers growth potential with manageable risk.`;
+    } else {
+      response += `🚀 **Growth Portfolio (Suitable for you):**\n`;
+      response += `• **Tech & Growth (60%):** MYEG, Pentamaster, VSTECS\n`;
+      response += `• **Emerging sectors (25%):** Healthcare, renewable energy\n`;
+      response += `• **Blue-chip anchor (15%):** Maybank, Public Bank\n\n`;
+      response += `This aggressive allocation targets higher returns for long-term growth.`;
+    }
+
+    response += `\n\n✅ All recommendations are Shariah-compliant securities from the SC Malaysia approved list.`;
+    response += `\n\n⚠️ **Important:** This is general guidance. Please consult with a licensed financial advisor before making investment decisions.`;
+    return response;
+  };
+
+  const getPortfolioAllocation = (profile: any): string => {
+    const riskLevel = profile.riskTolerance || "Moderate";
+    const timeHorizon = profile.timeHorizon || "5-10 years";
+    let response = `Based on your ${riskLevel.toLowerCase()} risk profile and ${timeHorizon} investment horizon:\n\n`;
+
+    if (riskLevel === "Conservative") {
+      response += `📊 **Conservative Allocation:**\n`;
+      response += `• Fixed Income/Sukuk: 50%\n`;
+      response += `• REITs: 30%\n`;
+      response += `• Blue-chip stocks: 20%\n`;
+    } else if (riskLevel === "Moderate") {
+      response += `📊 **Moderate Allocation:**\n`;
+      response += `• Equities: 60%\n`;
+      response += `• REITs: 25%\n`;
+      response += `• Fixed Income: 15%\n`;
+    } else {
+      response += `📊 **Aggressive Allocation:**\n`;
+      response += `• Growth stocks: 70%\n`;
+      response += `• REITs: 20%\n`;
+      response += `• Cash/Fixed Income: 10%\n`;
+    }
+
+    response += `\n💡 This allocation considers your investment timeline and risk tolerance.`;
+    response += `\n\n🔄 **Rebalancing:** Review and adjust quarterly to maintain target allocation.`;
+    return response;
+  };
+
+  const getStandardResponse = (question: string): string => {
     if (
-      userQuestion.includes("maybank") ||
-      userQuestion.includes("public bank") ||
-      userQuestion.includes("bank")
+      question.includes("maybank") ||
+      question.includes("public bank") ||
+      question.includes("bank")
     ) {
       return "Most major Malaysian banks like Maybank, CIMB, and Public Bank are generally Shariah-compliant. However, they do have conventional banking operations, so Islamic scholars may have varying opinions. I recommend checking the latest Securities Commission Malaysia's Shariah-compliant securities list for the most current status.\n\n📊 **Quick tip:** Banks often have both conventional and Islamic subsidiaries, so compliance can vary by specific entity.";
-    } else if (
-      userQuestion.includes("prohibited") ||
-      userQuestion.includes("haram") ||
-      userQuestion.includes("forbidden")
+    }
+    if (
+      question.includes("prohibited") ||
+      question.includes("haram") ||
+      question.includes("forbidden")
     ) {
-      return "The main prohibited sectors in Islamic finance include:\n\n🚫 **Clearly Prohibited:**\n• Conventional banking & insurance\n• Gambling and casinos\n• Alcohol production\n• Tobacco companies\n• Entertainment (adult entertainment)\n• Pork-related businesses\n\n⚠️ **Financial Screening:**\n• Companies with excessive debt (>33% debt-to-equity)\n• High interest income (>5% of total income)\n\nWould you like more details about any specific sector?";
-    } else if (
-      userQuestion.includes("screening") ||
-      userQuestion.includes("criteria")
-    ) {
+      return "The main prohibited sectors in Islamic finance include:\n\n🚫 **Clearly Prohibited:**\n• Conventional banking & insurance\n• Gambling and casinos\n• Alcohol production\n• Tobacco companies\n• Adult entertainment\n• Pork-related businesses\n\n⚠️ **Financial Screening:**\n• Companies with excessive debt (>33% debt-to-equity)\n• High interest income (>5% of total income)\n\nWould you like more details about any specific sector?";
+    }
+    if (question.includes("screening") || question.includes("criteria")) {
       return "Shariah screening involves both qualitative and quantitative filters:\n\n**🔍 Qualitative Screening:**\n• Business activities must be halal\n• No involvement in prohibited sectors\n• Company's core business should be permissible\n\n**📊 Quantitative Screening:**\n• Debt ratio: Usually <33% of total equity\n• Interest income: <5% of total income\n• Non-compliant income: <5% of total income\n• Cash & interest-bearing securities: <33% of total assets\n\nThe Securities Commission Malaysia updates these criteria regularly based on contemporary scholarship.";
-    } else {
-      return "Thank you for your question! 🤖\n\nAs an AI assistant, I provide general guidance based on common Shariah principles and practices in Malaysia. For specific investment decisions, please:\n\n📋 **Always consult:**\n• Latest Securities Commission Malaysia's Shariah-compliant securities list\n• Qualified Islamic scholars\n• Certified Islamic financial advisors\n\n🔍 **I can help you with:**\n• General Shariah compliance principles\n• Sector analysis\n• Screening criteria explanations\n• Investment concepts in Islamic finance\n\nWhat specific aspect of Shariah-compliant investing would you like to explore?";
+    }
+    return "Thank you for your question! 🤖\n\nAs an AI assistant, I provide general guidance based on common Shariah principles and practices in Malaysia. For specific investment decisions, please:\n\n📋 **Always consult:**\n• Latest Securities Commission Malaysia's Shariah-compliant securities list\n• Qualified Islamic scholars\n• Certified Islamic financial advisors\n\n🔍 **I can help you with:**\n• General Shariah compliance principles\n• Sector analysis\n• Screening criteria explanations\n• Investment concepts in Islamic finance\n\nWhat specific aspect of Shariah-compliant investing would you like to explore?";
+  };
+
+  const handleTranslate = async (text: string, targetLanguage: "en" | "ms") => {
+    try {
+      await translateText(text, targetLanguage);
+    } catch (error) {
+      console.error("Translation failed:", error);
     }
   };
 
@@ -153,26 +245,71 @@ export default function ChatPage() {
       }),
     };
 
+    const currentInput = input;
+    const aiMessageId = (Date.now() + 1).toString();
+
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
-    // Generate personalized AI response
-    setTimeout(() => {
-      const response = getPersonalizedResponse(input, user);
+    // Add empty AI message that will be updated with streaming content
+    const aiMessage: Message = {
+      id: aiMessageId,
+      content: "",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+    setMessages((prev) => [...prev, aiMessage]);
 
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response,
-        isUser: false,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      setMessages((prev) => [...prev, aiMessage]);
+    try {
+      // Prepare conversation history (exclude welcome message)
+      const conversationHistory = messages
+        .filter((msg) => msg.id !== "welcome")
+        .map((msg) => ({
+          content: msg.content,
+          isUser: msg.isUser,
+        }));
+
+      // Use streaming for better UX
+      await sendStreamingMessage(
+        currentInput,
+        conversationHistory,
+        user.id,
+        (chunk: string) => {
+          // Update the AI message with each chunk
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === aiMessageId
+                ? { ...msg, content: msg.content + chunk }
+                : msg
+            )
+          );
+        }
+      );
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      setBedrockStatus("offline");
+
+      // Fallback to mock response on error
+      const response = getPersonalizedResponse(currentInput);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === aiMessageId
+            ? {
+                ...msg,
+                content:
+                  response +
+                  "\n\n⚠️ *Using offline mode - AI service temporarily unavailable*",
+              }
+            : msg
+        )
+      );
+    } finally {
       setIsLoading(false);
-    }, 1200);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -214,7 +351,8 @@ export default function ChatPage() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground mb-4">
-                Please complete your investor suitability assessment to receive personalized recommendations.
+                Please complete your investor suitability assessment to receive
+                personalized recommendations.
               </p>
               <Button asChild>
                 <Link href="/assessment">Complete Assessment</Link>
@@ -233,55 +371,85 @@ export default function ChatPage() {
           <CardHeader className="border-b border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 shrink-0">
             <CardTitle className="flex items-center gap-3 text-xl">
               <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white">
-                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    bedrockStatus === "connected"
+                      ? "bg-green-400 animate-pulse"
+                      : bedrockStatus === "offline"
+                      ? "bg-red-400"
+                      : "bg-yellow-400 animate-pulse"
+                  }`}
+                ></div>
               </div>
-              JomKaya AI Assistant
-              <span className="text-sm font-normal text-muted-foreground bg-amber-100 dark:bg-amber-900/20 px-2 py-1 rounded-full">
-                ✨ Demo
+              <div className="flex flex-col">
+                <span>JomKaya AI Assistant</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  {bedrockStatus === "connected"
+                    ? "🤖 Nova Pro • Online"
+                    : bedrockStatus === "offline"
+                    ? "📱 Offline Mode"
+                    : "🔄 Connecting..."}
+                </span>
+              </div>
+              <span className="text-sm font-normal text-muted-foreground ml-auto mr-4">
+                Personalized for {user.name}
               </span>
+              <TranslationControls
+                onTranslate={handleTranslate}
+                isTranslating={isTranslating}
+                currentLanguage={currentLanguage}
+                onLanguageChange={setCurrentLanguage}
+              />
             </CardTitle>
           </CardHeader>
-
-          <CardContent className="flex-1 p-0 overflow-hidden">
-            <ScrollArea className="h-full">
-              <div className="p-6 space-y-6 min-h-full">
-                {messages.map((message) => (
-                  <ChatBubble
-                    key={message.id}
-                    message={message.content}
-                    isUser={message.isUser}
-                    timestamp={message.timestamp}
-                  />
-                ))}
-                {isLoading && (
-                  <ChatBubble message="" isUser={false} isLoading={true} />
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-
-          <div className="border-t border-amber-100 p-4 bg-amber-50/50 dark:bg-amber-950/10 shrink-0">
-            <div className="flex gap-3 max-w-4xl mx-auto">
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4 max-w-4xl mx-auto">
+              {messages.map((message) => (
+                <ChatBubble
+                  key={message.id}
+                  message={message.content}
+                  isUser={message.isUser}
+                  timestamp={message.timestamp}
+                  enableTranslation={true}
+                  onTranslate={translateText}
+                />
+              ))}
+              {isLoading && (
+                <ChatBubble
+                  message=""
+                  isUser={false}
+                  timestamp=""
+                  isLoading={true}
+                  enableTranslation={false}
+                />
+              )}
+            </div>
+          </ScrollArea>
+          <div className="p-4 border-t border-amber-100 bg-gradient-to-r from-amber-50/50 to-orange-50/50 dark:from-amber-950/10 dark:to-orange-950/10 shrink-0">
+            <div className="flex gap-2 max-w-4xl mx-auto">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Ask about Shariah-compliant stocks, sectors, or Islamic finance principles..."
-                className="flex-1 border-amber-200 focus:border-amber-400 bg-white"
+                placeholder={
+                  currentLanguage === "ms"
+                    ? "Tanya tentang pelaburan patuh Syariah..."
+                    : "Ask about Shariah-compliant investments..."
+                }
+                className="flex-1 border-amber-200 focus:border-amber-400 focus:ring-amber-400"
                 disabled={isLoading}
               />
               <Button
                 onClick={handleSendMessage}
-                disabled={!input.trim() || isLoading}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-500/25"
-                size="icon"
+                disabled={isLoading || !input.trim()}
+                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/25"
               >
                 <Send className="h-4 w-4" />
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2 text-center max-w-4xl mx-auto">
-              Press Enter to send, Shift+Enter for new line • Demo mode -
-              consult official sources for investment decisions
+              Press Enter to send • Educational guidance only - consult
+              professionals for investment decisions
             </p>
           </div>
         </Card>

@@ -43,10 +43,15 @@ export default function AssessmentPage() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (formData as InvestorAssessment) {
-      updateAssessment(formData as InvestorAssessment);
-      router.push("/chat");
+      try {
+        await updateAssessment(formData as InvestorAssessment);
+        router.push("/chat");
+      } catch (error) {
+        console.error("Failed to save assessment:", error);
+        // You could add error handling UI here
+      }
     }
   };
 
