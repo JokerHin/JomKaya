@@ -36,6 +36,12 @@ export function useTranslation(): TranslationHookReturn {
         const data = await response.json();
 
         if (!data.success) {
+          // If it's a permission error with fallback, show a warning but don't throw
+          if (data.fallback && data.translatedText) {
+            console.warn("Translation service unavailable:", data.error);
+            setError("Translation unavailable - showing original text");
+            return data.translatedText; // Return original text
+          }
           throw new Error(data.error || "Translation failed");
         }
 

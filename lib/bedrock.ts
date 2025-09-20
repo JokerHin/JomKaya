@@ -4,9 +4,8 @@ import {
   InvokeModelWithResponseStreamCommand,
 } from "@aws-sdk/client-bedrock-runtime";
 
-// Initialize Bedrock client
 const bedrockClient = new BedrockRuntimeClient({
-  region: process.env.AWS_REGION || "ap-southeast-1",
+  region: process.env.AWS_REGION,
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
@@ -22,8 +21,8 @@ export interface BedrockRequest {
   messages: ChatMessage[];
   maxTokens?: number;
   temperature?: number;
-  topP?: number;
   systemPrompt?: string;
+  userLanguage?: "en" | "ms";
 }
 
 export interface BedrockResponse {
@@ -36,39 +35,31 @@ export interface BedrockResponse {
 }
 
 export class BedrockService {
-  private static readonly MODEL_ID = "us.amazon.nova-pro-v1:0";
+  private static readonly MODEL_ID = "amazon.nova-pro-v1:0";
   private static readonly DEFAULT_MAX_TOKENS = 2048;
   private static readonly DEFAULT_TEMPERATURE = 0.7;
-  private static readonly DEFAULT_TOP_P = 0.9;
 
-  /**
-   * Generate a response using Nova Pro model
-   */
   static async generateResponse({
     messages,
     maxTokens = this.DEFAULT_MAX_TOKENS,
     temperature = this.DEFAULT_TEMPERATURE,
-    topP = this.DEFAULT_TOP_P,
     systemPrompt,
   }: BedrockRequest): Promise<BedrockResponse> {
     try {
-      // Prepare the messages array with system prompt if provided
-      const formattedMessages = [...messages];
+      const novaProMessages = this.formatMessagesForNovaPro(messages);
 
-      if (systemPrompt) {
-        formattedMessages.unshift({
-          role: "assistant",
-          content: systemPrompt,
-        });
-      }
-
-      const requestBody = {
-        messages: formattedMessages,
-        max_tokens: maxTokens,
-        temperature,
-        top_p: topP,
-        anthropic_version: "bedrock-2023-05-31",
+      const requestBody: any = {
+        messages: novaProMessages,
+        inferenceConfig: {
+          maxTokens: maxTokens,
+          temperature: temperature,
+        },
       };
+
+      // Add system prompt if provided
+      if (systemPrompt) {
+        requestBody.system = [{ text: systemPrompt }];
+      }
 
       const command = new InvokeModelCommand({
         modelId: this.MODEL_ID,
@@ -87,12 +78,23 @@ export class BedrockService {
 
       return {
         content:
-          responseBody.content?.[0]?.text || responseBody.completion || "",
+          responseBody.output?.message?.content?.[0]?.text ||
+          responseBody.content?.[0]?.text ||
+          responseBody.content ||
+          responseBody.output?.text ||
+          responseBody.completion ||
+          "",
         usage: {
-          inputTokens: responseBody.usage?.input_tokens || 0,
-          outputTokens: responseBody.usage?.output_tokens || 0,
+          inputTokens:
+            responseBody.usage?.inputTokens ||
+            responseBody.usage?.input_tokens ||
+            0,
+          outputTokens:
+            responseBody.usage?.outputTokens ||
+            responseBody.usage?.output_tokens ||
+            0,
         },
-        stopReason: responseBody.stop_reason,
+        stopReason: responseBody.stopReason || responseBody.stop_reason,
       };
     } catch (error) {
       console.error("Bedrock API error:", error);
@@ -102,33 +104,27 @@ export class BedrockService {
     }
   }
 
-  /**
-   * Generate streaming response using Nova Pro model
-   */
   static async generateStreamingResponse({
     messages,
     maxTokens = this.DEFAULT_MAX_TOKENS,
     temperature = this.DEFAULT_TEMPERATURE,
-    topP = this.DEFAULT_TOP_P,
     systemPrompt,
   }: BedrockRequest): Promise<AsyncIterable<string>> {
     try {
-      const formattedMessages = [...messages];
+      const novaProMessages = this.formatMessagesForNovaPro(messages);
 
-      if (systemPrompt) {
-        formattedMessages.unshift({
-          role: "assistant",
-          content: systemPrompt,
-        });
-      }
-
-      const requestBody = {
-        messages: formattedMessages,
-        max_tokens: maxTokens,
-        temperature,
-        top_p: topP,
-        anthropic_version: "bedrock-2023-05-31",
+      const requestBody: any = {
+        messages: novaProMessages,
+        inferenceConfig: {
+          maxTokens: maxTokens,
+          temperature: temperature,
+        },
       };
+
+      // Add system prompt if provided
+      if (systemPrompt) {
+        requestBody.system = [{ text: systemPrompt }];
+      }
 
       const command = new InvokeModelWithResponseStreamCommand({
         modelId: this.MODEL_ID,
@@ -154,9 +150,6 @@ export class BedrockService {
     }
   }
 
-  /**
-   * Parse streaming response from Bedrock
-   */
   private static async *parseStreamingResponse(
     stream: AsyncIterable<any>
   ): AsyncIterable<string> {
@@ -167,12 +160,23 @@ export class BedrockService {
             new TextDecoder().decode(chunk.chunk.bytes)
           );
 
-          if (chunkData.type === "content_block_delta") {
+          // Handle Nova Pro streaming format
+          if (chunkData.contentBlockDelta?.delta?.text) {
+            yield chunkData.contentBlockDelta.delta.text;
+          } else if (chunkData.type === "content_block_delta") {
             yield chunkData.delta?.text || "";
           } else if (chunkData.delta?.text) {
             yield chunkData.delta.text;
+          } else if (chunkData.output?.message?.content?.[0]?.text) {
+            yield chunkData.output.message.content[0].text;
+          } else if (chunkData.content?.[0]?.text) {
+            yield chunkData.content[0].text;
+          } else if (chunkData.content) {
+            yield chunkData.content;
           } else if (chunkData.completion) {
             yield chunkData.completion;
+          } else if (chunkData.text) {
+            yield chunkData.text;
           }
         }
       }
@@ -182,39 +186,53 @@ export class BedrockService {
     }
   }
 
-  /**
-   * Create system prompt for Shariah-compliant investment assistant
-   */
-  static createSystemPrompt(userProfile?: any): string {
+  static createSystemPrompt(
+    userProfile?: any,
+    userLanguage?: "en" | "ms"
+  ): string {
     let systemPrompt = `You are JomKaya AI Assistant, a specialized AI advisor for Shariah-compliant investments in Malaysia. Your expertise includes:
 
-🎯 **Core Responsibilities:**
+🎯 Core Responsibilities:
 - Provide guidance on Shariah-compliant investment principles
 - Recommend halal investment options in Malaysia
 - Explain Islamic finance concepts and screening criteria
 - Analyze Malaysian stocks for Shariah compliance
 - Suggest portfolio allocations based on Islamic principles
 
-📋 **Key Guidelines:**
+📋 Key Guidelines:
 - Always prioritize Shariah compliance in recommendations
 - Reference Securities Commission Malaysia's approved lists when relevant
 - Explain both opportunities and risks transparently
 - Encourage consultation with licensed Islamic financial advisors
 - Provide educational content rather than direct financial advice
 
-🚫 **Prohibited Areas:**
+🚫 Prohibited Areas:
 - Never recommend haram investments (alcohol, gambling, conventional interest-based products)
 - Avoid giving specific buy/sell advice
 - Don't guarantee returns or outcomes
 
-🌟 **Communication Style:**
+🌟 Communication Style:
 - Be helpful, professional, and educational
 - Use clear explanations for complex concepts
 - Include relevant emojis and formatting for readability
 - Provide practical, actionable guidance`;
 
+    // Add language preference instruction
+    if (userLanguage === "ms") {
+      systemPrompt += `\n\n🌏 Language Preference:
+- IMPORTANT: Respond in Bahasa Melayu (Malay language)
+- Use formal and polite Malay language appropriate for financial advice
+- Maintain technical accuracy while using accessible Malay terminology
+- When user writes in Malay, always respond in Malay`;
+    } else {
+      systemPrompt += `\n\n🌏 Language Preference:
+- IMPORTANT: Respond in English unless user specifically requests Malay
+- If user writes in Bahasa Melayu, respond in Bahasa Melayu
+- Match the user's language preference automatically`;
+    }
+
     if (userProfile) {
-      systemPrompt += `\n\n👤 **User Profile Context:**
+      systemPrompt += `\n\n👤 User Profile Context:
 - Risk Tolerance: ${userProfile.riskTolerance || "Not specified"}
 - Investment Experience: ${userProfile.investmentExperience || "Not specified"}
 - Time Horizon: ${userProfile.timeHorizon || "Not specified"}
@@ -229,18 +247,38 @@ Tailor your responses to match their profile while maintaining Shariah complianc
     return systemPrompt;
   }
 
-  /**
-   * Format conversation history for Bedrock
-   */
+  private static buildPromptFromMessages(messages: ChatMessage[]): string {
+    const lines: string[] = [];
+    for (const msg of messages) {
+      if (msg.role === "user") {
+        lines.push(`User: ${msg.content}`);
+      } else {
+        lines.push(`Assistant: ${msg.content}`);
+      }
+    }
+    return lines.join("\n\n");
+  }
+
   static formatConversationHistory(
-    messages: Array<{
-      content: string;
-      isUser: boolean;
-    }>
+    messages: Array<{ content: string; isUser: boolean }>
   ): ChatMessage[] {
     return messages.map((msg) => ({
       role: msg.isUser ? "user" : "assistant",
       content: msg.content,
+    }));
+  }
+
+  /**
+   * Format messages for Nova Pro which expects content as an array of content blocks
+   */
+  private static formatMessagesForNovaPro(messages: ChatMessage[]) {
+    return messages.map((msg) => ({
+      role: msg.role,
+      content: [
+        {
+          text: msg.content,
+        },
+      ],
     }));
   }
 }

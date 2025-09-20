@@ -33,7 +33,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Perform translation
     const result = await TranslationService.translateText({
       text,
       sourceLanguage,
@@ -41,6 +40,18 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
+      if (result.error?.includes("AWS permissions required")) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: result.error,
+            translatedText: result.translatedText,
+            fallback: true,
+          },
+          { status: 200 }
+        );
+      }
+
       return NextResponse.json(
         { success: false, error: result.error },
         { status: 500 }
@@ -85,12 +96,10 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const detection = await TranslationService.detectLanguage(text);
+      const language = await TranslationService.detectLanguage(text);
       return NextResponse.json({
-        success: detection.success,
-        language: detection.language,
-        confidence: detection.confidence,
-        error: detection.error,
+        success: true,
+        language,
       });
     }
 

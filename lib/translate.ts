@@ -73,8 +73,27 @@ export class TranslationService {
       };
     } catch (error) {
       console.error("Translation error:", error);
+
+      if (
+        error &&
+        typeof error === "object" &&
+        "name" in error &&
+        error.name === "AccessDeniedException"
+      ) {
+        console.warn(
+          "AWS Translate access denied - translation feature disabled"
+        );
+        return {
+          translatedText: text,
+          sourceLanguage,
+          targetLanguage,
+          success: false,
+          error: "Translation service unavailable - AWS permissions required",
+        };
+      }
+
       return {
-        translatedText: text, // Return original text on error
+        translatedText: text,
         sourceLanguage,
         targetLanguage,
         success: false,
@@ -83,45 +102,23 @@ export class TranslationService {
     }
   }
 
-  /**
-   * Detect the language of the given text
-   */
-  static async detectLanguage(text: string): Promise<{
-    language: string;
-    confidence: number;
-    success: boolean;
-    error?: string;
-  }> {
-    try {
-      // For simple detection, we can use a basic heuristic
-      // In a real implementation, you might want to use Amazon Comprehend
-      const englishPattern = /^[a-zA-Z0-9\s.,!?'"()-]+$/;
-      const hasEnglishWords =
-        /\b(the|and|or|but|in|on|at|to|for|of|with|by)\b/i.test(text);
+  static detectLanguage(text: string): "en" | "ms" {
+    const cleanText = text.toLowerCase().trim();
+    
+    // Common Malay words and patterns
+    const malayPatterns = [
+      /\byang\b/, /\bdan\b/, /\bsaya\b/, /\badalah\b/, /\buntuk\b/, /\bdalam\b/,
+      /\bini\b/, /\bitu\b/, /\bmaklumat\b/, /\bpelaburan\b/, /\bboleh\b/,
+      /\bsyariah\b/, /\bhalal\b/, /\bharam\b/, /\bbank\b/, /\bwang\b/,
+      /\bawan\b/, /\bkita\b/, /\bmereka\b/, /\bjuga\b/, /\btetapi\b/,
+      /\bseperti\b/, /\bdengan\b/, /\bkepada\b/, /\bdari\b/, /\bpada\b/
+    ];
 
-      if (englishPattern.test(text) && hasEnglishWords) {
-        return {
-          language: "en",
-          confidence: 0.8,
-          success: true,
-        };
-      } else {
-        return {
-          language: "ms",
-          confidence: 0.7,
-          success: true,
-        };
-      }
-    } catch (error) {
-      console.error("Language detection error:", error);
-      return {
-        language: "auto",
-        confidence: 0,
-        success: false,
-        error:
-          error instanceof Error ? error.message : "Language detection failed",
-      };
-    }
+    // Count Malay pattern matches
+    const malayMatches = malayPatterns.filter(pattern => pattern.test(cleanText)).length;
+    
+    // If we find 2 or more Malay patterns, assume it's Malay
+    return malayMatches >= 2 ? "ms" : "en";
   }
 
   /**

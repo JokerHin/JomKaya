@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BedrockService, ChatMessage } from "@/lib/bedrock";
 import { DatabaseService } from "@/lib/database";
+import { TranslationService } from "@/lib/translate";
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,8 +37,14 @@ export async function POST(request: NextRequest) {
       { role: "user", content: message },
     ];
 
-    // Create system prompt
-    const systemPrompt = BedrockService.createSystemPrompt(userProfile);
+    // Detect the language of the user's message
+    const userLanguage = TranslationService.detectLanguage(message);
+
+    // Create system prompt with language preference
+    const systemPrompt = BedrockService.createSystemPrompt(
+      userProfile,
+      userLanguage
+    );
 
     if (useStreaming) {
       // Return streaming response
@@ -58,7 +65,6 @@ export async function POST(request: NextRequest) {
               controller.enqueue(encoder.encode(data));
             }
 
-            // Send completion signal
             const endData = `data: ${JSON.stringify({ done: true })}\n\n`;
             controller.enqueue(encoder.encode(endData));
             controller.close();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Send } from "lucide-react";
@@ -14,6 +14,7 @@ import { useAuth } from "@/components/auth-provider";
 import { TranslationControls } from "@/components/translation-controls";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useStreamingChat } from "@/hooks/useStreamingChat";
+import { TranslationService } from "@/lib/translate";
 
 interface Message {
   id: string;
@@ -35,6 +36,7 @@ export default function ChatPage() {
   const { translateText, isTranslating, currentLanguage, setCurrentLanguage } =
     useTranslation();
   const { sendStreamingMessage } = useStreamingChat();
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) {
@@ -48,6 +50,35 @@ export default function ChatPage() {
     fetchUserProfile();
     checkBedrockStatus();
   }, [user, router]);
+
+  // Scroll to bottom function
+  const scrollToBottom = () => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector(
+        "[data-radix-scroll-area-viewport]"
+      );
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    }
+  };
+
+  // Clean AI response formatting
+  const cleanAIResponse = (text: string): string => {
+    return (
+      text
+        // Remove markdown headers (### ## #)
+        .replace(/^#{1,6}\s+/gm, "")
+        // Remove bold/italic markers (**text** *text*)
+        .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/\*(.*?)\*/g, "$1")
+        // Remove bullet points with asterisks
+        .replace(/^\s*\*\s+/gm, "• ")
+        // Clean up extra whitespace
+        .replace(/\n{3,}/g, "\n\n")
+        .trim()
+    );
+  };
 
   const checkBedrockStatus = async () => {
     try {
@@ -252,6 +283,9 @@ export default function ChatPage() {
     setInput("");
     setIsLoading(true);
 
+    // Scroll to bottom after adding user message
+    setTimeout(scrollToBottom, 100);
+
     // Add empty AI message that will be updated with streaming content
     const aiMessage: Message = {
       id: aiMessageId,
@@ -273,6 +307,8 @@ export default function ChatPage() {
           isUser: msg.isUser,
         }));
 
+      let finalResponse = "";
+
       // Use streaming for better UX
       await sendStreamingMessage(
         currentInput,
@@ -280,33 +316,74 @@ export default function ChatPage() {
         user.id,
         (chunk: string) => {
           // Update the AI message with each chunk
+          finalResponse += chunk;
+          const cleanedResponse = cleanAIResponse(finalResponse);
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === aiMessageId
-                ? { ...msg, content: msg.content + chunk }
+                ? { ...msg, content: cleanedResponse }
                 : msg
             )
           );
+          // Auto-scroll as content updates
+          setTimeout(scrollToBottom, 50);
         }
       );
+
+      // After streaming is complete, check if we need to auto-translate
+      if (finalResponse) {
+        const userInputLanguage =
+          TranslationService.detectLanguage(currentInput);
+        const responseLanguage =
+          TranslationService.detectLanguage(finalResponse);
+
+        // If languages don't match and we have translation enabled, auto-translate
+        if (
+          userInputLanguage !== responseLanguage &&
+          currentLanguage !== "auto"
+        ) {
+          try {
+            const translatedResponse = await translateText(
+              finalResponse,
+              userInputLanguage
+            );
+            if (translatedResponse && translatedResponse !== finalResponse) {
+              const cleanedTranslation = cleanAIResponse(translatedResponse);
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === aiMessageId
+                    ? { ...msg, content: cleanedTranslation }
+                    : msg
+                )
+              );
+              setTimeout(scrollToBottom, 100);
+            }
+          } catch (translationError) {
+            console.log("Auto-translation failed, keeping original response");
+          }
+        }
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
       setBedrockStatus("offline");
 
       // Fallback to mock response on error
       const response = getPersonalizedResponse(currentInput);
+      const cleanedResponse = cleanAIResponse(
+        response +
+          "\n\n⚠️ *Using offline mode - AI service temporarily unavailable*"
+      );
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === aiMessageId
             ? {
                 ...msg,
-                content:
-                  response +
-                  "\n\n⚠️ *Using offline mode - AI service temporarily unavailable*",
+                content: cleanedResponse,
               }
             : msg
         )
       );
+      setTimeout(scrollToBottom, 100);
     } finally {
       setIsLoading(false);
     }
@@ -402,8 +479,8 @@ export default function ChatPage() {
               />
             </CardTitle>
           </CardHeader>
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4 max-w-4xl mx-auto">
+          <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 w-full">
+            <div className="space-y-4  mx-auto">
               {messages.map((message) => (
                 <ChatBubble
                   key={message.id}
