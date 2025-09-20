@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DatabaseService } from "@/lib/database";
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    const body = await request.json();
+    const userId = body?.userId;
 
     if (!userId) {
       return NextResponse.json(
@@ -45,4 +45,11 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+export async function GET() {
+  return NextResponse.json(
+    { success: false, message: "Please use POST with JSON body { userId }" },
+    { status: 400 }
+  );
 }
