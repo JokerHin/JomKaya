@@ -4,9 +4,7 @@ import {
   BookOpen,
   TrendingUp,
   Scale,
-  Globe,
   Lightbulb,
-  ExternalLink,
   ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,7 +40,7 @@ export default function AboutPage() {
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Your trusted AI assistant for navigating Shariah-compliant
-              investments in Malaysia's dynamic financial markets.
+              investments in Malaysia&apos;s dynamic financial markets.
             </p>
           </div>
 

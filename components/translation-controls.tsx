@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,7 +17,6 @@ interface TranslationControlsProps {
 }
 
 export function TranslationControls({
-  onTranslate,
   isTranslating,
   currentLanguage,
   onLanguageChange,
@@ -79,7 +78,6 @@ interface MessageTranslationProps {
 }
 
 export function MessageTranslation({
-  originalText,
   translatedText,
   isTranslated,
   onToggleTranslation,

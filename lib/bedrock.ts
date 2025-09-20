@@ -3,6 +3,14 @@ import {
   InvokeModelCommand,
   InvokeModelWithResponseStreamCommand,
 } from "@aws-sdk/client-bedrock-runtime";
+import { DBInvestorProfile } from "@/components/auth-provider";
+
+// Nova Pro request shape used by BedrockService
+type NovaProRequest = {
+  messages: Array<{ role: string; content: { text: string }[] }>;
+  inferenceConfig?: { maxTokens?: number; temperature?: number };
+  system?: { text: string }[];
+};
 
 const bedrockClient = new BedrockRuntimeClient({
   region: process.env.REGION,
@@ -48,7 +56,7 @@ export class BedrockService {
     try {
       const novaProMessages = this.formatMessagesForNovaPro(messages);
 
-      const requestBody: any = {
+      const requestBody: NovaProRequest = {
         messages: novaProMessages,
         inferenceConfig: {
           maxTokens: maxTokens,
@@ -113,7 +121,7 @@ export class BedrockService {
     try {
       const novaProMessages = this.formatMessagesForNovaPro(messages);
 
-      const requestBody: any = {
+      const requestBody: NovaProRequest = {
         messages: novaProMessages,
         inferenceConfig: {
           maxTokens: maxTokens,
@@ -151,32 +159,111 @@ export class BedrockService {
   }
 
   private static async *parseStreamingResponse(
-    stream: AsyncIterable<any>
+    stream: AsyncIterable<unknown>
   ): AsyncIterable<string> {
     try {
       for await (const chunk of stream) {
-        if (chunk.chunk?.bytes) {
-          const chunkData = JSON.parse(
-            new TextDecoder().decode(chunk.chunk.bytes)
-          );
+        // narrow unknown to a reasonable object shape
+        if (typeof chunk === "object" && chunk !== null && "chunk" in chunk) {
+          const c = chunk as { chunk?: { bytes?: Uint8Array } };
+          if (c.chunk?.bytes) {
+            const decoded = new TextDecoder().decode(c.chunk.bytes);
 
-          // Handle Nova Pro streaming format
-          if (chunkData.contentBlockDelta?.delta?.text) {
-            yield chunkData.contentBlockDelta.delta.text;
-          } else if (chunkData.type === "content_block_delta") {
-            yield chunkData.delta?.text || "";
-          } else if (chunkData.delta?.text) {
-            yield chunkData.delta.text;
-          } else if (chunkData.output?.message?.content?.[0]?.text) {
-            yield chunkData.output.message.content[0].text;
-          } else if (chunkData.content?.[0]?.text) {
-            yield chunkData.content[0].text;
-          } else if (chunkData.content) {
-            yield chunkData.content;
-          } else if (chunkData.completion) {
-            yield chunkData.completion;
-          } else if (chunkData.text) {
-            yield chunkData.text;
+            let parsed: unknown;
+            try {
+              parsed = JSON.parse(decoded);
+            } catch {
+              yield decoded;
+              continue;
+            }
+
+            if (typeof parsed === "object" && parsed !== null) {
+              const obj = parsed as Record<string, unknown>;
+
+              // Nova Pro: contentBlockDelta.delta.text
+              const cbd = obj["contentBlockDelta"];
+              if (typeof cbd === "object" && cbd !== null) {
+                const delta = (cbd as Record<string, unknown>)["delta"];
+                if (typeof delta === "object" && delta !== null) {
+                  const text = (delta as Record<string, unknown>)["text"];
+                  if (typeof text === "string") {
+                    yield text;
+                    continue;
+                  }
+                }
+              }
+
+              // content_block_delta with delta.text
+              if (obj["type"] === "content_block_delta") {
+                const delta = obj["delta"];
+                if (typeof delta === "object" && delta !== null) {
+                  const text = (delta as Record<string, unknown>)["text"];
+                  if (typeof text === "string") {
+                    yield text;
+                    continue;
+                  }
+                }
+              }
+
+              // delta.text
+              if (typeof obj["delta"] === "object" && obj["delta"] !== null) {
+                const text = (obj["delta"] as Record<string, unknown>)["text"];
+                if (typeof text === "string") {
+                  yield text;
+                  continue;
+                }
+              }
+
+              // output.message.content[0].text
+              const output = obj["output"];
+              if (typeof output === "object" && output !== null) {
+                const message = (output as Record<string, unknown>)["message"];
+                if (typeof message === "object" && message !== null) {
+                  const content = (message as Record<string, unknown>)[
+                    "content"
+                  ];
+                  if (
+                    Array.isArray(content) &&
+                    typeof content[0] === "object" &&
+                    content[0] !== null
+                  ) {
+                    const text = (content[0] as Record<string, unknown>)[
+                      "text"
+                    ];
+                    if (typeof text === "string") {
+                      yield text;
+                      continue;
+                    }
+                  }
+                }
+              }
+
+              // content[0].text or content
+              const contentTop = obj["content"];
+              if (Array.isArray(contentTop)) {
+                const first = contentTop[0];
+                if (typeof first === "object" && first !== null) {
+                  const text = (first as Record<string, unknown>)["text"];
+                  if (typeof text === "string") {
+                    yield text;
+                    continue;
+                  }
+                }
+              } else if (typeof contentTop === "string") {
+                yield contentTop;
+                continue;
+              }
+
+              // completion or text fields
+              if (typeof obj["completion"] === "string") {
+                yield obj["completion"] as string;
+                continue;
+              }
+              if (typeof obj["text"] === "string") {
+                yield obj["text"] as string;
+                continue;
+              }
+            }
           }
         }
       }
@@ -187,7 +274,7 @@ export class BedrockService {
   }
 
   static createSystemPrompt(
-    userProfile?: any,
+    userProfile?: DBInvestorProfile | null,
     userLanguage?: "en" | "ms"
   ): string {
     let systemPrompt = `You are JomKaya AI Assistant, a specialized AI advisor for Shariah-compliant investments in Malaysia. Your expertise includes:

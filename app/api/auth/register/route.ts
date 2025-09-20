@@ -25,19 +25,22 @@ export async function POST(request: NextRequest) {
     // Create new user
     const user = await DatabaseService.createUser(email, password, name);
 
-    // Return user without password and map user_id to id for frontend compatibility
-    const { password: _, user_id, ...userWithoutPassword } = user;
+    type DBUser = { [key: string]: unknown } & { password?: string };
+    const userCopy = { ...user } as DBUser;
+    delete userCopy.password;
+
+    const userId = (user as { user_id?: string }).user_id;
 
     return NextResponse.json({
       success: true,
       user: {
-        id: user_id,
-        ...userWithoutPassword,
+        id: userId,
+        ...userCopy,
       },
       message: "User created successfully",
     });
-  } catch (error) {
-    console.error("Registration error:", error);
+  } catch (_error) {
+    console.error("Registration error:", _error);
     return NextResponse.json(
       { success: false, message: "Internal server error" },
       { status: 500 }

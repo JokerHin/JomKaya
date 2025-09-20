@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Send } from "lucide-react";
@@ -23,13 +23,27 @@ interface Message {
   timestamp: string;
 }
 
+interface UserProfile {
+  riskTolerance?: string;
+  investmentExperience?: string;
+  timeHorizon?: string;
+  investmentGoals?: string[];
+  liquidityNeeds?: string;
+}
+
+interface UserMinimal {
+  id: string;
+  name: string;
+  hasCompletedAssessment?: boolean;
+}
+
 export default function ChatPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [bedrockStatus, setBedrockStatus] = useState<
     "unknown" | "connected" | "offline"
   >("unknown");
@@ -37,6 +51,26 @@ export default function ChatPage() {
     useTranslation();
   const { sendStreamingMessage } = useStreamingChat();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const fetchUserProfile = useCallback(async () => {
+    if (!user) return;
+    try {
+      const response = await fetch(`/api/assessment?userId=${user.id}`);
+      const data = await response.json();
+      if (data.success && data.profile) {
+        setUserProfile(data.profile);
+        const personalizedWelcome = getPersonalizedWelcome(user, data.profile);
+        setMessages([personalizedWelcome]);
+      } else {
+        const welcomeMessage = getPersonalizedWelcome(user, null);
+        setMessages([welcomeMessage]);
+      }
+    } catch {
+      console.error("Failed to fetch user profile:");
+      const basicWelcome = getPersonalizedWelcome(user, null);
+      setMessages([basicWelcome]);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -49,7 +83,7 @@ export default function ChatPage() {
     }
     fetchUserProfile();
     checkBedrockStatus();
-  }, [user, router]);
+  }, [user, router, fetchUserProfile]);
 
   // Scroll to bottom function
   const scrollToBottom = () => {
@@ -85,32 +119,15 @@ export default function ChatPage() {
       const response = await fetch("/api/chat?action=health");
       const data = await response.json();
       setBedrockStatus(data.success ? "connected" : "offline");
-    } catch (error) {
+    } catch {
       setBedrockStatus("offline");
     }
   };
 
-  const fetchUserProfile = async () => {
-    if (!user) return;
-    try {
-      const response = await fetch(`/api/assessment?userId=${user.id}`);
-      const data = await response.json();
-      if (data.success && data.profile) {
-        setUserProfile(data.profile);
-        const personalizedWelcome = getPersonalizedWelcome(user, data.profile);
-        setMessages([personalizedWelcome]);
-      } else {
-        const welcomeMessage = getPersonalizedWelcome(user, null);
-        setMessages([welcomeMessage]);
-      }
-    } catch (error) {
-      console.error("Failed to fetch user profile:", error);
-      const basicWelcome = getPersonalizedWelcome(user, null);
-      setMessages([basicWelcome]);
-    }
-  };
-
-  const getPersonalizedWelcome = (user: any, profile: any): Message => {
+  const getPersonalizedWelcome = (
+    user: UserMinimal,
+    profile: UserProfile | null
+  ): Message => {
     let welcomeMessage = `Hello ${user.name}! 👋\n\nWelcome to JomKaya AI Assistant. I'm here to help you with Shariah-compliant investment guidance.\n\n`;
 
     if (profile) {
@@ -174,9 +191,12 @@ export default function ChatPage() {
   };
 
   const getProfileBasedRecommendation = (
-    profile: any,
-    question: string
+    profile: UserProfile | null,
+    question?: string
   ): string => {
+    if (!profile) {
+      return getStandardResponse(question || "");
+    }
     let response = `Based on your ${
       profile.riskTolerance || "moderate"
     } risk profile, here are my recommendations:\n\n`;
@@ -207,7 +227,8 @@ export default function ChatPage() {
     return response;
   };
 
-  const getPortfolioAllocation = (profile: any): string => {
+  const getPortfolioAllocation = (profile: UserProfile | null): string => {
+    if (!profile) return getStandardResponse("");
     const riskLevel = profile.riskTolerance || "Moderate";
     const timeHorizon = profile.timeHorizon || "5-10 years";
     let response = `Based on your ${riskLevel.toLowerCase()} risk profile and ${timeHorizon} investment horizon:\n\n`;
@@ -258,8 +279,8 @@ export default function ChatPage() {
   const handleTranslate = async (text: string, targetLanguage: "en" | "ms") => {
     try {
       await translateText(text, targetLanguage);
-    } catch (error) {
-      console.error("Translation failed:", error);
+    } catch (_error) {
+      console.error("Translation failed:", _error);
     }
   };
 
@@ -358,13 +379,13 @@ export default function ChatPage() {
               );
               setTimeout(scrollToBottom, 100);
             }
-          } catch (translationError) {
+          } catch {
             console.log("Auto-translation failed, keeping original response");
           }
         }
       }
-    } catch (error) {
-      console.error("Failed to send message:", error);
+    } catch (_error) {
+      console.error("Failed to send message:", _error);
       setBedrockStatus("offline");
 
       // Fallback to mock response on error

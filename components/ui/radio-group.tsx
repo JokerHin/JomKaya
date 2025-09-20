@@ -1,8 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Circle } from "lucide-react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
 interface RadioGroupProps {
   value?: string;
@@ -35,15 +34,16 @@ const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(
           {children}
         </div>
       </RadioGroupContext.Provider>
-    )
+    );
   }
-)
-RadioGroup.displayName = "RadioGroup"
+);
+RadioGroup.displayName = "RadioGroup";
 
 const RadioGroupItem = React.forwardRef<HTMLInputElement, RadioGroupItemProps>(
   ({ className, value, id, ...props }, ref) => {
-    const { value: groupValue, onValueChange } = React.useContext(RadioGroupContext);
-    
+    const { value: groupValue, onValueChange } =
+      React.useContext(RadioGroupContext);
+
     return (
       <input
         ref={ref}
@@ -58,9 +58,9 @@ const RadioGroupItem = React.forwardRef<HTMLInputElement, RadioGroupItemProps>(
         )}
         {...props}
       />
-    )
+    );
   }
-)
-RadioGroupItem.displayName = "RadioGroupItem"
+);
+RadioGroupItem.displayName = "RadioGroupItem";
 
-export { RadioGroup, RadioGroupItem }
+export { RadioGroup, RadioGroupItem };

@@ -21,7 +21,7 @@ export class DatabaseService {
       .substr(2, 9)}`;
 
     const user: DBUser = {
-      user_id: userId, // Changed from 'id' to 'user_id' to match DynamoDB schema
+      user_id: userId,
       email,
       password: hashedPassword,
       name,
@@ -180,24 +180,34 @@ export class DatabaseService {
 
   static convertAssessmentToProfile(
     userId: string,
-    assessment: any
+    assessment: {
+      investmentGoals?: string[];
+      riskAppetite?: string;
+      investmentExperience?: string;
+      investmentHorizon?: string;
+      initialInvestmentAmount?: number | string;
+      monthlyIncome?: number | string;
+      preferredSectors?: string[];
+      shariahCompliantOnly?: boolean;
+      liquidityNeeds?: string;
+    }
   ): Omit<DBInvestorProfile, "createdAt" | "updatedAt"> {
     return {
       profileId: `profile_${userId}_${Date.now()}`, // Generate unique profile ID
       user_id: userId,
       investmentGoals: assessment.investmentGoals || [],
-      riskTolerance: this.mapRiskTolerance(assessment.riskAppetite),
+      riskTolerance: this.mapRiskTolerance(assessment.riskAppetite || ""),
       investmentExperience: this.mapInvestmentExperience(
-        assessment.investmentExperience
+        assessment.investmentExperience || ""
       ),
-      timeHorizon: this.mapTimeHorizon(assessment.investmentHorizon),
+      timeHorizon: this.mapTimeHorizon(assessment.investmentHorizon || ""),
       investmentAmount: assessment.initialInvestmentAmount?.toString() || "0",
       incomeRange: assessment.monthlyIncome?.toString() || "0",
       geographicPreferences: assessment.preferredSectors || [],
       sustainabilityFocus: assessment.shariahCompliantOnly
         ? "Very Important"
         : "Not Important",
-      liquidityNeeds: this.mapLiquidityNeeds(assessment.liquidityNeeds),
+      liquidityNeeds: this.mapLiquidityNeeds(assessment.liquidityNeeds || ""),
       taxConsiderations: "Somewhat Important",
     };
   }

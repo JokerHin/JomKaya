@@ -39,13 +39,15 @@ export async function POST(request: NextRequest) {
       user.user_id
     );
 
-    const { password: _, user_id, ...userWithoutPassword } = user;
+    type DBUser = { [key: string]: unknown } & { password?: string };
+    const userCopy = { ...user } as DBUser;
+    delete userCopy.password;
 
     return NextResponse.json({
       success: true,
       user: {
-        ...userWithoutPassword,
-        id: user_id,
+        ...userCopy,
+        id: user.user_id,
         hasCompletedAssessment: !!investorProfile,
         assessmentData: investorProfile || undefined,
       },

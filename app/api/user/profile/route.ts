@@ -26,12 +26,14 @@ export async function GET(request: NextRequest) {
     const profile = await DatabaseService.getInvestorProfile(userId);
 
     // Return user without password
-    const { password: _, ...userWithoutPassword } = user;
+    type DBUser = { [key: string]: unknown } & { password?: string };
+    const userCopy = { ...user } as DBUser;
+    delete userCopy.password;
 
     return NextResponse.json({
       success: true,
       user: {
-        ...userWithoutPassword,
+        ...userCopy,
         hasCompletedAssessment: !!profile,
         profileData: profile || null,
       },

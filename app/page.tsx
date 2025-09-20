@@ -1,13 +1,5 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  MessageCircle,
-  Shield,
-  Sparkles,
-  BookOpen,
-  TrendingUp,
-  Zap,
-} from "lucide-react";
+import { ArrowRight, MessageCircle, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -95,7 +87,7 @@ export default function HomePage() {
                 <CardTitle className="text-xl">Official Data</CardTitle>
                 <CardDescription className="text-base">
                   Information sourced directly from Securities Commission
-                  Malaysia's official Shariah-compliant securities list
+                  Malaysia&apos;s official Shariah-compliant securities list
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -138,8 +130,9 @@ export default function HomePage() {
                 Ready to Start Your Shariah-Compliant Investment Journey?
               </h3>
               <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Ask questions like "Is Maybank Shariah-compliant?" or "What
-                sectors are typically halal?" and get instant answers.
+                Ask questions like &quot;Is Maybank Shariah-compliant?&quot; or
+                &quot;What sectors are typically halal?&quot; and get instant
+                answers.
               </p>
               <Button
                 asChild

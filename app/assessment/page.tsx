@@ -55,7 +55,10 @@ export default function AssessmentPage() {
     }
   };
 
-  const updateFormData = (field: keyof InvestorAssessment, value: any) => {
+  const updateFormData = (
+    field: keyof InvestorAssessment,
+    value: string | number | boolean | string[]
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -244,8 +247,8 @@ export default function AssessmentPage() {
                     </Label>
                   </div>
                   <p className="text-sm text-muted-foreground ml-6">
-                    I'm willing to accept moderate risk for potentially higher
-                    returns (e.g., Balanced Unit Trusts)
+                    I&apos;m willing to accept moderate risk for potentially
+                    higher returns (e.g., Balanced Unit Trusts)
                   </p>
                 </div>
 
@@ -257,8 +260,8 @@ export default function AssessmentPage() {
                     </Label>
                   </div>
                   <p className="text-sm text-muted-foreground ml-6">
-                    I'm comfortable with high risk for potentially high returns
-                    (e.g., Equity Funds, Individual Stocks)
+                    I&apos;m comfortable with high risk for potentially high
+                    returns (e.g., Equity Funds, Individual Stocks)
                   </p>
                 </div>
 
@@ -270,8 +273,8 @@ export default function AssessmentPage() {
                     </Label>
                   </div>
                   <p className="text-sm text-muted-foreground ml-6">
-                    I'm willing to take significant risks for maximum growth
-                    potential (e.g., Small Cap Funds, Commodities)
+                    I&apos;m willing to take significant risks for maximum
+                    growth potential (e.g., Small Cap Funds, Commodities)
                   </p>
                 </div>
               </RadioGroup>
@@ -294,7 +297,7 @@ export default function AssessmentPage() {
                   "Retirement planning",
                   "Wealth growth",
                   "Regular income generation",
-                  "Children's education fund",
+                  "Children&apos;s education fund",
                   "Emergency fund building",
                   "House down payment",
                   "Wealth preservation",
@@ -552,7 +555,7 @@ export default function AssessmentPage() {
                       </Label>
                     </div>
                     <p className="text-sm text-muted-foreground ml-6">
-                      I'm new to investing and need guidance
+                      I&apos;m new to investing and need guidance
                     </p>
                   </div>
 
@@ -589,8 +592,8 @@ export default function AssessmentPage() {
                       </Label>
                     </div>
                     <p className="text-sm text-muted-foreground ml-6">
-                      I'm experienced with various investment types and market
-                      cycles
+                      I&apos;m experienced with various investment types and
+                      market cycles
                     </p>
                   </div>
                 </RadioGroup>
