@@ -5,10 +5,10 @@ import {
 
 // Initialize the Translate client
 const translateClient = new TranslateClient({
-  region: process.env.AWS_REGION || "us-east-1",
+  region: process.env.REGION || "us-east-1",
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.ACCESS_KEY_ID!,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY!,
   },
 });
 
@@ -104,19 +104,42 @@ export class TranslationService {
 
   static detectLanguage(text: string): "en" | "ms" {
     const cleanText = text.toLowerCase().trim();
-    
+
     // Common Malay words and patterns
     const malayPatterns = [
-      /\byang\b/, /\bdan\b/, /\bsaya\b/, /\badalah\b/, /\buntuk\b/, /\bdalam\b/,
-      /\bini\b/, /\bitu\b/, /\bmaklumat\b/, /\bpelaburan\b/, /\bboleh\b/,
-      /\bsyariah\b/, /\bhalal\b/, /\bharam\b/, /\bbank\b/, /\bwang\b/,
-      /\bawan\b/, /\bkita\b/, /\bmereka\b/, /\bjuga\b/, /\btetapi\b/,
-      /\bseperti\b/, /\bdengan\b/, /\bkepada\b/, /\bdari\b/, /\bpada\b/
+      /\byang\b/,
+      /\bdan\b/,
+      /\bsaya\b/,
+      /\badalah\b/,
+      /\buntuk\b/,
+      /\bdalam\b/,
+      /\bini\b/,
+      /\bitu\b/,
+      /\bmaklumat\b/,
+      /\bpelaburan\b/,
+      /\bboleh\b/,
+      /\bsyariah\b/,
+      /\bhalal\b/,
+      /\bharam\b/,
+      /\bbank\b/,
+      /\bwang\b/,
+      /\bawan\b/,
+      /\bkita\b/,
+      /\bmereka\b/,
+      /\bjuga\b/,
+      /\btetapi\b/,
+      /\bseperti\b/,
+      /\bdengan\b/,
+      /\bkepada\b/,
+      /\bdari\b/,
+      /\bpada\b/,
     ];
 
     // Count Malay pattern matches
-    const malayMatches = malayPatterns.filter(pattern => pattern.test(cleanText)).length;
-    
+    const malayMatches = malayPatterns.filter((pattern) =>
+      pattern.test(cleanText)
+    ).length;
+
     // If we find 2 or more Malay patterns, assume it's Malay
     return malayMatches >= 2 ? "ms" : "en";
   }
