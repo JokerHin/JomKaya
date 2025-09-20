@@ -91,9 +91,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("jomkaya_user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    if (typeof window !== "undefined") {
+      const storedUser = localStorage.getItem("jomkaya_user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
     }
     setIsLoading(false);
   }, []);
@@ -113,7 +115,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.success && data.user) {
         setUser(data.user);
-        localStorage.setItem("jomkaya_user", JSON.stringify(data.user));
+        if (typeof window !== "undefined") {
+          localStorage.setItem("jomkaya_user", JSON.stringify(data.user));
+        }
         setIsLoading(false);
         return true;
       } else {
@@ -151,7 +155,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           hasCompletedAssessment: false,
         };
         setUser(newUser);
-        localStorage.setItem("jomkaya_user", JSON.stringify(newUser));
+        if (typeof window !== "undefined") {
+          localStorage.setItem("jomkaya_user", JSON.stringify(newUser));
+        }
         setIsLoading(false);
         return true;
       } else {
@@ -168,7 +174,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("jomkaya_user");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("jomkaya_user");
+    }
   };
 
   const updateAssessment = async (assessment: InvestorAssessment) => {
@@ -194,7 +202,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             assessmentData: assessment,
           };
           setUser(updatedUser);
-          localStorage.setItem("jomkaya_user", JSON.stringify(updatedUser));
+          if (typeof window !== "undefined") {
+            localStorage.setItem("jomkaya_user", JSON.stringify(updatedUser));
+          }
         } else {
           console.error("Failed to save assessment:", data.message);
         }

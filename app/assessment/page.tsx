@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { useAuth, InvestorAssessment } from "@/components/auth-provider";
 export default function AssessmentPage() {
   const { user, updateAssessment } = useAuth();
   const router = useRouter();
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<Partial<InvestorAssessment>>({
     shariahCompliantOnly: true,
@@ -647,8 +648,14 @@ export default function AssessmentPage() {
     }
   };
 
-  if (!user) {
-    router.push("/login");
+  useEffect(() => {
+    if (!user) {
+      router.push("/login");
+    }
+    setCheckingAuth(false);
+  }, [user, router]);
+
+  if (checkingAuth) {
     return null;
   }
 
