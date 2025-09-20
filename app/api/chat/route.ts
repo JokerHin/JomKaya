@@ -141,47 +141,9 @@ Please try again in a moment, or consult with a qualified financial professional
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const action = searchParams.get("action");
-
-    if (action === "health") {
-      // Health check endpoint
-      return NextResponse.json({
-        success: true,
-        service: "Bedrock Nova Pro",
-        status: "operational",
-        model: "us.amazon.nova-pro-v1:0",
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    if (action === "models") {
-      // Return available models info
-      return NextResponse.json({
-        success: true,
-        models: [
-          {
-            id: "us.amazon.nova-pro-v1:0",
-            name: "Amazon Nova Pro",
-            description: "Advanced multimodal model for text generation",
-            capabilities: ["text", "reasoning", "analysis"],
-            maxTokens: 4096,
-          },
-        ],
-      });
-    }
-
-    return NextResponse.json(
-      { success: false, error: "Invalid action parameter" },
-      { status: 400 }
-    );
-  } catch (error) {
-    console.error("Bedrock API error:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
-  }
+export async function GET() {
+  return NextResponse.json(
+    { success: false, error: "Please use POST with JSON body" },
+    { status: 400 }
+  );
 }

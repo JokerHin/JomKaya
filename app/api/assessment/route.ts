@@ -55,30 +55,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, message: "User ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const profile = await DatabaseService.getInvestorProfile(userId);
-
-    return NextResponse.json({
-      success: true,
-      profile,
-      message: profile ? "Profile found" : "Profile not found",
-    });
-  } catch (error) {
-    console.error("Get assessment error:", error);
-    return NextResponse.json(
-      { success: false, message: "Internal server error" },
-      { status: 500 }
-    );
-  }
+export async function GET() {
+  return NextResponse.json(
+    { success: false, message: "Please use POST with JSON body { userId }" },
+    { status: 400 }
+  );
 }

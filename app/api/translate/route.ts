@@ -3,8 +3,49 @@ import { TranslationService, TranslationRequest } from "@/lib/translate";
 
 export async function POST(request: NextRequest) {
   try {
-    const body: TranslationRequest = await request.json();
-    const { text, sourceLanguage, targetLanguage } = body;
+    const body: TranslationRequest | { action?: string; text?: string } =
+      await request.json();
+
+    // Handle query actions (languages, detect)
+    if ("action" in body && body.action) {
+      const action = body.action;
+
+      if (action === "languages") {
+        // Return supported languages
+        const supportedLanguages = TranslationService.getSupportedLanguages();
+        return NextResponse.json({
+          success: true,
+          ...supportedLanguages,
+        });
+      }
+
+      if (action === "detect") {
+        const text = body?.text;
+        if (!text) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: "Text parameter is required for detection",
+            },
+            { status: 400 }
+          );
+        }
+
+        const language = await TranslationService.detectLanguage(text);
+        return NextResponse.json({
+          success: true,
+          detectedLanguage: language,
+        });
+      }
+
+      return NextResponse.json(
+        { success: false, error: "Unknown action" },
+        { status: 400 }
+      );
+    }
+
+    // Handle translation requests (existing logic)
+    const { text, sourceLanguage, targetLanguage } = body as TranslationRequest;
 
     // Validate input
     if (!text) {
@@ -73,45 +114,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const action = searchParams.get("action");
-
-    if (action === "languages") {
-      // Return supported languages
-      const supportedLanguages = TranslationService.getSupportedLanguages();
-      return NextResponse.json({
-        success: true,
-        ...supportedLanguages,
-      });
-    }
-
-    if (action === "detect") {
-      const text = searchParams.get("text");
-      if (!text) {
-        return NextResponse.json(
-          { success: false, error: "Text parameter is required for detection" },
-          { status: 400 }
-        );
-      }
-
-      const language = await TranslationService.detectLanguage(text);
-      return NextResponse.json({
-        success: true,
-        language,
-      });
-    }
-
-    return NextResponse.json(
-      { success: false, error: "Invalid action parameter" },
-      { status: 400 }
-    );
-  } catch (error) {
-    console.error("Translation API error:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
-  }
+export async function GET() {
+  return NextResponse.json(
+    { success: false, error: "Please use POST with JSON body" },
+    { status: 400 }
+  );
 }
