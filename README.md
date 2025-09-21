@@ -17,11 +17,11 @@ Language Barrier – Most existing tools and resources are in English or use tec
 
 Trust & Guidance – Retail investors often don’t know where to start when looking for trustworthy Shariah-compliant investments, leading to confusion or risky choices.
 
-Our assistant solves these problems by:
-✅ Providing instant answers about Shariah compliance and Islamic screening rules.
-✅ Offering recommendations on Shariah-compliant investments.
-✅ Supporting Bahasa Melayu for better accessibility among rural communities.
-✅ Acting as a trusted, AI-powered guide for making informed and halal investment decisions.
+Our assistant solves these problems by:<br/>
+✅ Providing instant answers about Shariah compliance and Islamic screening rules. <br/>
+✅ Offering recommendations on Shariah-compliant investments.<br/>
+✅ Supporting Bahasa Melayu for better accessibility among rural communities.<br/>
+✅ Acting as a trusted, AI-powered guide for making informed and halal investment decisions.<br/>
 
 <h2>🏗️ Architecture</h2>
 <img src="screenshot/Architecture.png" alt="architecture" width="600"/>
