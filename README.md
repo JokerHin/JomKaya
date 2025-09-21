@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<h1>JomKaya</h1>
 
-## Getting Started
+JomKaya is a full-stack financial web platform built with Next.js, AWS Amplify, DynamoDB, and Amazon Bedrock AI.
+It provides authentication, investor profile management, and an AI-powered chatbot for financial guidance.
 
-First, run the development server:
+✨ Features
 
-```bash
+🔐 Authentication (Login & Register with DynamoDB backend)
+
+👤 Investor Profiles (Manage user investment data)
+
+💬 AI Chatbot (Powered by Amazon Bedrock or OpenAI)
+
+📊 Assessment Tools (Basic financial assessments)
+
+☁️ Deployed on AWS Amplify with auto-deploy from GitHub
+
+🏗️ Architecture
+[ User Browser ]
+      |
+      v
+[ Next.js Frontend (Amplify Hosting) ]
+      |
+      v
+[ Next.js API Routes -> Amplify Lambda Functions ]
+      |                   |
+      |                   +--> [ DynamoDB Tables (Users, Profiles, Chat) ]
+      |                   |
+      |                   +--> [ AI Provider: Amazon Bedrock / OpenAI ]
+      |
+      v
+[ Response Rendered in Chat UI ]
+
+📸 Screenshots
+🔐 Login Page
+
+📝 Register Page
+
+💬 AI Chatbot
+
+📊 Investor Profile Dashboard
+
+⚠️ Replace the image links with your actual screenshots stored in docs/screenshots/.
+
+⚙️ Environment Variables
+
+Create a .env file for local development:
+
+REGION=us-east-1
+NEXT_PUBLIC_DYNAMODB_USERS_TABLE=Users
+NEXT_PUBLIC_DYNAMODB_INVESTOR_PROFILES_TABLE=InvestorProfiles
+
+# AI Provider
+NEXT_PUBLIC_BEDROCK_REGION=us-east-1
+NEXT_PUBLIC_OPENAI_API_KEY=your_openai_key   # if using OpenAI
+
+
+⚠️ Do not prefix with AWS_ in Amplify — these are reserved. Use NEXT_PUBLIC_ for frontend-accessible values.
+In production, add the same variables under Amplify → App Settings → Environment Variables.
+
+🖥️ Running Locally
+# Install dependencies
+npm install
+
+# Start dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+# Build production
+npm run build
+npm start
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+🚀 Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Amplify Hosting:
+Every push to GitHub → triggers an Amplify build → deploys automatically.
 
-## Learn More
+Ensure Amplify IAM Role has permissions:
 
-To learn more about Next.js, take a look at the following resources:
+dynamodb:GetItem, PutItem, UpdateItem, Query
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+bedrock:InvokeModel (if using Bedrock)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+ssm:GetParameter (if using SSM secrets)
