@@ -1,28 +1,28 @@
 <h1>JomKaya</h1>
-</div>
+Website : <a href="https://main.d2xt46nqbihpj9.amplifyapp.com/chat">https://main.d2xt46nqbihpj9.amplifyapp.com/chat</a>
+Github : <a href="https://github.com/JokerHin/JomKaya">https://github.com/JokerHin/JomKaya</a>
 
-A web application that helps users instantly check the Shariah compliance status of securities in Malaysia. The platform provides AI-powered insights on:
+Our project is an AI-powered Shariah-compliant investment assistant that helps users explore and understand Shariah-compliant investment opportunities in Malaysia. The system not only answers questions about stock compliance, Islamic screening rules, and sectors but also provides personalised investment recommendations that align with Shariah principles.
 
-✅ Whether a stock is Shariah-compliant
+To make it more inclusive, the assistant can also communicate in Bahasa Melayu, so that even kampung investors (rural community investors) who may not be fluent in English can easily use the platform and gain confidence in making Shariah-compliant financial decisions.
 
-📊 Sector classifications and screening criteria
+<h1>❗ Problem We Are Solving</h1>
 
-📖 Explanations of Islamic screening rules
+Many investors in Malaysia face challenges when it comes to understanding Shariah compliance in investments:
 
-Built with Next.js, AWS Amplify, and DynamoDB, the assistant makes it easy for investors to make informed and ethical investment decisions.
+Lack of Accessibility – Information about Shariah-compliant stocks is often scattered and technical, making it difficult for ordinary investors to verify compliance quickly.
 
-✨ Features
-🔐 Authentication: Login and Register with DynamoDB backend.
+Language Barrier – Most existing tools and resources are in English or use technical financial jargon, which excludes rural or less tech-savvy investors.
 
-👤 Investor Profiles: Manage user investment data.
+Trust & Guidance – Retail investors often don’t know where to start when looking for trustworthy Shariah-compliant investments, leading to confusion or risky choices.
 
-💬 AI Chatbot: Powered by Amazon Bedrock or OpenAI.
+Our assistant solves these problems by:
+✅ Providing instant answers about Shariah compliance and Islamic screening rules.
+✅ Offering recommendations on Shariah-compliant investments.
+✅ Supporting Bahasa Melayu for better accessibility among rural communities.
+✅ Acting as a trusted, AI-powered guide for making informed and halal investment decisions.
 
-📊 Assessment Tools: Basic financial assessments.
-
-☁️ Deployment: Deployed on AWS Amplify with auto-deploy from GitHub.
-
-🏗️ Architecture
+<h1>🏗️ Architecture</h1>
 [ User Browser ]
       |
       v
@@ -50,22 +50,8 @@ Built with Next.js, AWS Amplify, and DynamoDB, the assistant makes it easy for i
 📊 Investor Profile Dashboard
 <img src="docs/screenshots/dashboard.png" alt="Investor Profile Dashboard" width="600"/>
 
-⚠️ Note: Replace the image links with your actual screenshots stored in docs/screenshots/.
 
-⚙️ Environment Variables
-Create a .env file for local development:
-
-REGION=us-east-1
-NEXT_PUBLIC_DYNAMODB_USERS_TABLE=Users
-NEXT_PUBLIC_DYNAMODB_INVESTOR_PROFILES_TABLE=InvestorProfiles
-
-# AI Provider
-NEXT_PUBLIC_BEDROCK_REGION=us-east-1
-NEXT_PUBLIC_OPENAI_API_KEY=your_openai_key   # if using OpenAI
-⚠️ Warning: Do not prefix with AWS_ in Amplify — these are reserved. Use NEXT_PUBLIC_ for frontend-accessible values. In production, add the same variables under Amplify → App Settings → Environment Variables.
-
-🖥️ Running Locally
-Bash
+<h1>🖥️ Running Locally</h1>
 
 # Install dependencies
 npm install
