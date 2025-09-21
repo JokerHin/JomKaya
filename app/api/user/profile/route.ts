@@ -39,7 +39,20 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Get user profile error:", error);
+    const errAny = error as any;
+    try {
+      console.error("Get user profile error:", errAny, errAny?.stack);
+    } catch (logErr) {
+      console.error("Get user profile error (failed to print stack):", error);
+    }
+
+    if (errAny && typeof errAny.message === "string") {
+      return NextResponse.json(
+        { success: false, message: errAny.message },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       { success: false, message: "Internal server error" },
       { status: 500 }

@@ -40,11 +40,18 @@ export async function POST(request: NextRequest) {
       message: "User created successfully",
     });
   } catch (_error) {
+    const errAny = _error as any;
     try {
-      const errAny = _error as any;
       console.error("Registration error:", errAny, errAny?.stack);
     } catch (logErr) {
       console.error("Registration error (failed to print stack):", _error);
+    }
+
+    if (errAny && typeof errAny.message === "string") {
+      return NextResponse.json(
+        { success: false, message: errAny.message },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(

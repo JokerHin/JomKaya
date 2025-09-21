@@ -3,7 +3,20 @@ import { DatabaseService } from "@/lib/database";
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, assessmentData } = await request.json();
+    const body = await request.json();
+
+    if (body.userId && !body.assessmentData) {
+      const userId = body.userId;
+      const profile = await DatabaseService.getInvestorProfile(userId);
+
+      return NextResponse.json({
+        success: true,
+        profile,
+        message: profile ? "Profile found" : "Profile not found",
+      });
+    }
+
+    const { userId, assessmentData } = body;
 
     // Validate input
     if (!userId || !assessmentData) {
@@ -47,7 +60,20 @@ export async function POST(request: NextRequest) {
       message: "Assessment saved successfully",
     });
   } catch (error) {
-    console.error("Assessment save error:", error);
+    const errAny = error as any;
+    try {
+      console.error("Assessment save error:", errAny, errAny?.stack);
+    } catch (logErr) {
+      console.error("Assessment save error (failed to print stack):", error);
+    }
+
+    if (errAny && typeof errAny.message === "string") {
+      return NextResponse.json(
+        { success: false, message: errAny.message },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       { success: false, message: "Internal server error" },
       { status: 500 }

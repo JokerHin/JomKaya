@@ -106,7 +106,20 @@ export async function POST(request: NextRequest) {
       targetLanguage: result.targetLanguage,
     });
   } catch (error) {
-    console.error("Translation API error:", error);
+    const errAny = error as any;
+    try {
+      console.error("Translation API error:", errAny, errAny?.stack);
+    } catch (logErr) {
+      console.error("Translation API error (failed to print stack):", error);
+    }
+
+    if (errAny && typeof errAny.message === "string") {
+      return NextResponse.json(
+        { success: false, error: errAny.message },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

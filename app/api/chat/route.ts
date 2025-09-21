@@ -5,12 +5,52 @@ import { TranslationService } from "@/lib/translate";
 
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
+
+    // Handle query actions (health, models) vs chat messages
+    if (body.action) {
+      const action = body.action;
+
+      if (action === "health") {
+        // Health check endpoint
+        return NextResponse.json({
+          success: true,
+          service: "Bedrock Nova Pro",
+          status: "operational",
+          model: "us.amazon.nova-pro-v1:0",
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      if (action === "models") {
+        // Return available models info
+        return NextResponse.json({
+          success: true,
+          models: [
+            {
+              id: "us.amazon.nova-pro-v1:0",
+              name: "Amazon Nova Pro",
+              description: "Advanced multimodal model for text generation",
+              capabilities: ["text", "reasoning", "analysis"],
+              maxTokens: 4096,
+            },
+          ],
+        });
+      }
+
+      return NextResponse.json(
+        { success: false, error: "Invalid action parameter" },
+        { status: 400 }
+      );
+    }
+
+    // Handle chat messages (existing logic)
     const {
       message,
       conversationHistory = [],
       userId,
       useStreaming = false,
-    } = await request.json();
+    } = body;
 
     // Validate input
     if (!message || typeof message !== "string") {

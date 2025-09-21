@@ -70,14 +70,17 @@ export interface DBInvestorProfile {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string, name: string) => Promise<boolean>;
+  register: (
+    email: string,
+    password: string,
+    name: string
+  ) => Promise<{ success: boolean; message?: string; user?: User | null }>;
   logout: () => void;
   updateAssessment: (assessment: InvestorAssessment) => Promise<void>;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export function useAuth() {
   const context = useContext(AuthContext);
@@ -104,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${apiBase}/api/auth/login`, {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -137,10 +140,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string,
     name: string
-  ): Promise<boolean> => {
+  ): Promise<{ success: boolean; message?: string; user?: User | null }> => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${apiBase}/api/auth/register`, {
+      const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -160,16 +163,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem("jomkaya_user", JSON.stringify(newUser));
         }
         setIsLoading(false);
-        return true;
+        return { success: true, user: newUser, message: data.message };
       } else {
         console.error("Registration failed:", data.message);
         setIsLoading(false);
-        return false;
+        return { success: false, message: data.message };
       }
     } catch (error) {
       console.error("Registration error:", error);
       setIsLoading(false);
-      return false;
+      return { success: false, message: "Registration failed. Please try again." };
     }
   };
 
@@ -183,7 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateAssessment = async (assessment: InvestorAssessment) => {
     if (user) {
       try {
-        const response = await fetch(`${apiBase}/api/assessment`, {
+        const response = await fetch("/api/assessment", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

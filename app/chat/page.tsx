@@ -55,7 +55,13 @@ export default function ChatPage() {
   const fetchUserProfile = useCallback(async () => {
     if (!user) return;
     try {
-      const response = await fetch(`/api/assessment?userId=${user.id}`);
+      const response = await fetch("/api/assessment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
       const data = await response.json();
       if (data.success && data.profile) {
         setUserProfile(data.profile);
@@ -116,7 +122,13 @@ export default function ChatPage() {
 
   const checkBedrockStatus = async () => {
     try {
-      const response = await fetch("/api/chat?action=health");
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "health" }),
+      });
       const data = await response.json();
       setBedrockStatus(data.success ? "connected" : "offline");
     } catch {

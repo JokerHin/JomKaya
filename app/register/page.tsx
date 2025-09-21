@@ -40,11 +40,11 @@ export default function RegisterPage() {
       return;
     }
 
-    const success = await register(email, password, name);
-    if (success) {
+    const result = await register(email, password, name);
+    if (result.success) {
       router.push("/assessment");
     } else {
-      setError("Registration failed. Please try again.");
+      setError(result.message || "Registration failed. Please try again.");
     }
   };
 

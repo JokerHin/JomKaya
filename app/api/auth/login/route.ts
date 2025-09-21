@@ -54,7 +54,20 @@ export async function POST(request: NextRequest) {
       message: "Login successful",
     });
   } catch (error) {
-    console.error("Login error:", error);
+    const errAny = error as any;
+    try {
+      console.error("Login error:", errAny, errAny?.stack);
+    } catch (logErr) {
+      console.error("Login error (failed to print stack):", error);
+    }
+
+    if (errAny && typeof errAny.message === "string") {
+      return NextResponse.json(
+        { success: false, message: errAny.message },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       { success: false, message: "Internal server error" },
       { status: 500 }
