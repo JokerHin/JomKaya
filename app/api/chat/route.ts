@@ -17,7 +17,7 @@ const client = new BedrockAgentRuntimeClient({
 });
 
 const FLOW_ID = process.env.FLOW_ID || "M8PC8ANZ5M";
-const FLOW_ALIAS = process.env.FLOW_ALIAS || "O73TJ3764V";
+const FLOW_ALIAS = process.env.FLOW_ALIAS || "97YHOEJG6R";
 const AWS_REGION = process.env.REGION || "us-east-1";
 
 export async function POST(request: NextRequest) {
