@@ -4,9 +4,18 @@ import { DatabaseService } from "@/lib/database";
 import { TranslationService } from "@/lib/translate";
 
 export async function POST(request: NextRequest) {
+  let body;
   try {
-    const body = await request.json();
+    body = await request.json();
+  } catch (parseError) {
+    console.error("Failed to parse JSON body:", parseError);
+    return NextResponse.json(
+      { success: false, error: "Invalid JSON body" },
+      { status: 400 }
+    );
+  }
 
+  try {
     // Handle query actions (health, models) vs chat messages
     if (body.action) {
       const action = body.action;
@@ -181,7 +190,7 @@ Please try again in a moment, or consult with a qualified financial professional
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   return NextResponse.json(
     { success: false, error: "Please use POST with JSON body" },
     { status: 400 }

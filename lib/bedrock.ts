@@ -12,13 +12,21 @@ type NovaProRequest = {
   system?: { text: string }[];
 };
 
-const bedrockClient = new BedrockRuntimeClient({
-  region: process.env.REGION,
-  credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID!,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY!,
-  },
-});
+const bedrockClient = new BedrockRuntimeClient(
+  (() => {
+    const clientConfig: any = { region: process.env.REGION };
+    const accessKey = process.env.ACCESS_KEY_ID;
+    const secretKey = process.env.SECRET_ACCESS_KEY;
+
+    if (accessKey && secretKey) {
+      clientConfig.credentials = {
+        accessKeyId: accessKey,
+        secretAccessKey: secretKey,
+      };
+    }
+    return clientConfig;
+  })()
+);
 
 export interface ChatMessage {
   role: "user" | "assistant";
