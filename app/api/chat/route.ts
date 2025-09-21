@@ -11,13 +11,15 @@ import { TranslationService } from "@/lib/translate";
 // Create client with better credential handling
 const createBedrockClient = () => {
   const region = process.env.REGION || process.env.AWS_REGION || "us-east-1";
-  
+
   // Try different credential configurations
-  const accessKeyId = process.env.ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
-  
+  const accessKeyId =
+    process.env.ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey =
+    process.env.SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+
   const clientConfig: any = { region };
-  
+
   // Only add credentials if they exist (allows for IAM roles in production)
   if (accessKeyId && secretAccessKey) {
     clientConfig.credentials = {
@@ -25,7 +27,7 @@ const createBedrockClient = () => {
       secretAccessKey,
     };
   }
-  
+
   return new BedrockAgentRuntimeClient(clientConfig);
 };
 
@@ -58,10 +60,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to initialize AWS Bedrock client. Please check credentials.",
+        error:
+          "Failed to initialize AWS Bedrock client. Please check credentials.",
         debug: {
-          hasAccessKey: !!(process.env.ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID),
-          hasSecretKey: !!(process.env.SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY),
+          hasAccessKey: !!(
+            process.env.ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID
+          ),
+          hasSecretKey: !!(
+            process.env.SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY
+          ),
           region: AWS_REGION,
         },
       },
@@ -201,12 +208,21 @@ export async function POST(request: NextRequest) {
     // Provide more specific error messages
     let errorMessage = "Flow failed";
     if (invokeErr instanceof Error) {
-      if (invokeErr.message.includes("Resolved credential object is not valid")) {
-        errorMessage = "AWS credentials are invalid or missing. Please check your production environment variables.";
-      } else if (invokeErr.message.includes("The security token included in the request is invalid")) {
-        errorMessage = "AWS credentials are expired or invalid. Please update your credentials.";
+      if (
+        invokeErr.message.includes("Resolved credential object is not valid")
+      ) {
+        errorMessage =
+          "AWS credentials are invalid or missing. Please check your production environment variables.";
+      } else if (
+        invokeErr.message.includes(
+          "The security token included in the request is invalid"
+        )
+      ) {
+        errorMessage =
+          "AWS credentials are expired or invalid. Please update your credentials.";
       } else if (invokeErr.message.includes("UnrecognizedClientException")) {
-        errorMessage = "AWS credentials are not recognized. Please verify your access key and secret key.";
+        errorMessage =
+          "AWS credentials are not recognized. Please verify your access key and secret key.";
       } else if (
         invokeErr.message.includes(
           "No value provided for input HTTP label: flowIdentifier"
@@ -231,10 +247,22 @@ export async function POST(request: NextRequest) {
         flowAlias: FLOW_ALIAS,
         region: AWS_REGION,
         debug: {
-          hasAccessKey: !!(process.env.ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID),
-          hasSecretKey: !!(process.env.SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY),
-          accessKeySource: process.env.ACCESS_KEY_ID ? "ACCESS_KEY_ID" : process.env.AWS_ACCESS_KEY_ID ? "AWS_ACCESS_KEY_ID" : "none",
-          secretKeySource: process.env.SECRET_ACCESS_KEY ? "SECRET_ACCESS_KEY" : process.env.AWS_SECRET_ACCESS_KEY ? "AWS_SECRET_ACCESS_KEY" : "none",
+          hasAccessKey: !!(
+            process.env.ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID
+          ),
+          hasSecretKey: !!(
+            process.env.SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY
+          ),
+          accessKeySource: process.env.ACCESS_KEY_ID
+            ? "ACCESS_KEY_ID"
+            : process.env.AWS_ACCESS_KEY_ID
+            ? "AWS_ACCESS_KEY_ID"
+            : "none",
+          secretKeySource: process.env.SECRET_ACCESS_KEY
+            ? "SECRET_ACCESS_KEY"
+            : process.env.AWS_SECRET_ACCESS_KEY
+            ? "AWS_SECRET_ACCESS_KEY"
+            : "none",
         },
       },
       { status: 500 }
