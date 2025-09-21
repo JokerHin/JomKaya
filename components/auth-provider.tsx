@@ -77,6 +77,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export function useAuth() {
   const context = useContext(AuthContext);
@@ -103,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(`${apiBase}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -139,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch(`${apiBase}/api/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -182,7 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateAssessment = async (assessment: InvestorAssessment) => {
     if (user) {
       try {
-        const response = await fetch("/api/assessment", {
+        const response = await fetch(`${apiBase}/api/assessment`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
