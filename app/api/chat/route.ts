@@ -9,16 +9,16 @@ import { DatabaseService } from "@/lib/database";
 import { TranslationService } from "@/lib/translate";
 
 const client = new BedrockAgentRuntimeClient({
-  region: process.env.REGION,
+  region: process.env.REGION || "us-east-1",
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID!,
     secretAccessKey: process.env.SECRET_ACCESS_KEY!,
   },
 });
 
-const FLOW_ID = process.env.FLOW_ID;
-const FLOW_ALIAS = process.env.FLOW_ALIAS;
-const AWS_REGION = process.env.REGION;
+const FLOW_ID = process.env.FLOW_ID || "M8PC8ANZ5M";
+const FLOW_ALIAS = process.env.FLOW_ALIAS || "O73TJ3764V";
+const AWS_REGION = process.env.REGION || "us-east-1";
 
 export async function POST(request: NextRequest) {
   let bodyJson: any;
@@ -159,11 +159,22 @@ export async function POST(request: NextRequest) {
     }
   } catch (invokeErr) {
     console.error("Flow invocation failed:", invokeErr);
+    console.error("Flow configuration at error:", {
+      flowId: FLOW_ID,
+      flowAlias: FLOW_ALIAS,
+      region: AWS_REGION,
+    });
 
     // Provide more specific error messages
     let errorMessage = "Flow failed";
     if (invokeErr instanceof Error) {
-      if (invokeErr.message.includes("Invalid flow alias arn")) {
+      if (
+        invokeErr.message.includes(
+          "No value provided for input HTTP label: flowIdentifier"
+        )
+      ) {
+        errorMessage = `Flow identifier is missing. Current flowId: "${FLOW_ID}". Please check environment configuration.`;
+      } else if (invokeErr.message.includes("Invalid flow alias arn")) {
         errorMessage = `Invalid flow alias. Please check that the flow "${FLOW_ID}" exists and alias "${FLOW_ALIAS}" is valid in region ${AWS_REGION}.`;
       } else if (invokeErr.message.includes("AccessDenied")) {
         errorMessage =
