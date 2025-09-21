@@ -8,17 +8,30 @@ import {
 import { DatabaseService } from "@/lib/database";
 import { TranslationService } from "@/lib/translate";
 
-const client = new BedrockAgentRuntimeClient({
-  region: process.env.REGION || "us-east-1",
-  credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID!,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY!,
-  },
-});
+// Create client with better credential handling
+const createBedrockClient = () => {
+  const region = process.env.REGION || process.env.AWS_REGION || "us-east-1";
+  
+  // Try different credential configurations
+  const accessKeyId = process.env.ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+  
+  const clientConfig: any = { region };
+  
+  // Only add credentials if they exist (allows for IAM roles in production)
+  if (accessKeyId && secretAccessKey) {
+    clientConfig.credentials = {
+      accessKeyId,
+      secretAccessKey,
+    };
+  }
+  
+  return new BedrockAgentRuntimeClient(clientConfig);
+};
 
 const FLOW_ID = process.env.FLOW_ID || "M8PC8ANZ5M";
 const FLOW_ALIAS = process.env.FLOW_ALIAS || "97YHOEJG6R";
-const AWS_REGION = process.env.REGION || "us-east-1";
+const AWS_REGION = process.env.REGION || process.env.AWS_REGION || "us-east-1";
 
 export async function POST(request: NextRequest) {
   let bodyJson: any;
@@ -34,6 +47,26 @@ export async function POST(request: NextRequest) {
   // Handle health check
   if (bodyJson.action === "health") {
     return NextResponse.json({ success: true, status: "connected" });
+  }
+
+  // Create client instance with error handling
+  let client: BedrockAgentRuntimeClient;
+  try {
+    client = createBedrockClient();
+  } catch (clientError) {
+    console.error("Failed to create Bedrock client:", clientError);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to initialize AWS Bedrock client. Please check credentials.",
+        debug: {
+          hasAccessKey: !!(process.env.ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID),
+          hasSecretKey: !!(process.env.SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY),
+          region: AWS_REGION,
+        },
+      },
+      { status: 500 }
+    );
   }
 
   const {
@@ -168,7 +201,13 @@ export async function POST(request: NextRequest) {
     // Provide more specific error messages
     let errorMessage = "Flow failed";
     if (invokeErr instanceof Error) {
-      if (
+      if (invokeErr.message.includes("Resolved credential object is not valid")) {
+        errorMessage = "AWS credentials are invalid or missing. Please check your production environment variables.";
+      } else if (invokeErr.message.includes("The security token included in the request is invalid")) {
+        errorMessage = "AWS credentials are expired or invalid. Please update your credentials.";
+      } else if (invokeErr.message.includes("UnrecognizedClientException")) {
+        errorMessage = "AWS credentials are not recognized. Please verify your access key and secret key.";
+      } else if (
         invokeErr.message.includes(
           "No value provided for input HTTP label: flowIdentifier"
         )
@@ -191,6 +230,12 @@ export async function POST(request: NextRequest) {
         flowId: FLOW_ID,
         flowAlias: FLOW_ALIAS,
         region: AWS_REGION,
+        debug: {
+          hasAccessKey: !!(process.env.ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID),
+          hasSecretKey: !!(process.env.SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY),
+          accessKeySource: process.env.ACCESS_KEY_ID ? "ACCESS_KEY_ID" : process.env.AWS_ACCESS_KEY_ID ? "AWS_ACCESS_KEY_ID" : "none",
+          secretKeySource: process.env.SECRET_ACCESS_KEY ? "SECRET_ACCESS_KEY" : process.env.AWS_SECRET_ACCESS_KEY ? "AWS_SECRET_ACCESS_KEY" : "none",
+        },
       },
       { status: 500 }
     );
